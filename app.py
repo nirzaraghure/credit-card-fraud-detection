@@ -1,50 +1,136 @@
+```python
 import streamlit as st
 import pandas as pd
 import joblib
+from typing import Dict, List
 
-# Load the trained model
-model = joblib.load('rf_fraud_model.pkl')
+# --------------------------------------------------------------------------- #
+# Caching
+# --------------------------------------------------------------------------- #
+@st.cache_resource(show_spinner=False)
+def load_model(path: str = "rf_fraud_model.pkl"):
+    """Load and return the trained RandomForest model."""
+    return joblib.load(path)
 
+model = load_model()
+
+# --------------------------------------------------------------------------- #
+# Page configuration
+# --------------------------------------------------------------------------- #
 st.set_page_config(page_title="Credit Card Fraud Detection", layout="centered")
 st.title("💳 Credit Card Fraud Detection")
-st.markdown("Enter transaction details to predict if it's **Fraudulent or Legitimate**.")
+st.markdown(
+    """
+    Enter transaction details to predict whether the transaction is
+    **Fraudulent** or **Legitimate**.
+    """
+)
 
-# Input fields
-def user_input():
-    scaled_amount = st.number_input("💰 Scaled Transaction Amount", value=0.0, format="%.4f")
-    scaled_time = st.number_input("🕒 Scaled Time of Transaction", value=0.0, format="%.4f")
-    v1 = st.number_input("V1", value=0.0)
-    v2 = st.number_input("V2", value=0.0)
-    v3 = st.number_input("V3", value=0.0)
-    v4 = st.number_input("V4", value=0.0)
-    v5 = st.number_input("V5", value=0.0)
+# --------------------------------------------------------------------------- #
+# Helper functions
+# --------------------------------------------------------------------------- #
+def build_feature_dict(
+    scaled_amount: float,
+    scaled_time: float,
+    pca_features: List[float],
+    feature_names: List[str],
+) -> Dict[str, float]:
+    """
+    Build a feature dictionary from user inputs.
 
-    # Add more Vx if needed, for now keeping top 5 PCA features + scaled ones
-    data = {
-        'scaled_amount': scaled_amount,
-        'scaled_time': scaled_time,
-        'V1': v1,
-        'V2': v2,
-        'V3': v3,
-        'V4': v4,
-        'V5': v5
+    Parameters
+    ----------
+    scaled_amount : float
+        Scaled transaction amount.
+    scaled_time : float
+        Scaled time of transaction.
+    pca_features : List[float]
+        Values for PCA features V1..Vn.
+    feature_names : List[str]
+        Corresponding feature names for PCA features.
+
+    Returns
+    -------
+    Dict[str, float]
+        Dictionary suitable for DataFrame creation.
+    """
+    return {
+        "scaled_amount": scaled_amount,
+        "scaled_time": scaled_time,
+        **{name: val for name, val in zip(feature_names, pca_features)},
     }
 
-    return pd.DataFrame(data, index=[0])
 
-# Get input data
-input_data = user_input()
+def predict_transaction(df: pd.DataFrame) -> tuple[int, float]:
+    """
+    Predict fraud probability for a single transaction.
 
-# Predict
-if st.button("🔍 Predict"):
+    Returns
+    -------
+    prediction : int
+        1 for Fraudulent, 0 for Legitimate.
+    probability : float
+        Probability of fraud.
+    """
+    pred = model.predict(df)[0]
+    prob = model.predict_proba(df)[0][1]
+    return int(pred), float(prob)
+
+
+# --------------------------------------------------------------------------- #
+# Sidebar: Configure number of PCA features
+# --------------------------------------------------------------------------- #
+st.sidebar.header("Transaction Features")
+n_features = st.sidebar.slider(
+    "Number of PCA features (V1..Vn)",
+    min_value=1,
+    max_value=20,
+    value=5,
+    step=1,
+    help="Select how many PCA components to include.",
+)
+
+# --------------------------------------------------------------------------- #
+# Main input form
+# --------------------------------------------------------------------------- #
+with st.form(key="transaction_form"):
+    scaled_amount = st.number_input(
+        "💰 Scaled Transaction Amount", value=0.0, format="%.4f"
+    )
+    scaled_time = st.number_input("🕒 Scaled Time of Transaction", value=0.0, format="%.4f")
+
+    # Dynamically create inputs for PCA features
+    pca_inputs = []
+    for i in range(1, n_features + 1):
+        val = st.number_input(f"V{i}", value=0.0)
+        pca_inputs.append(val)
+
+    submit_button = st.form_submit_button(label="🔍 Predict")
+
+# --------------------------------------------------------------------------- #
+# Prediction logic
+# --------------------------------------------------------------------------- #
+if submit_button:
     try:
-        prediction = model.predict(input_data)[0]
-        proba = model.predict_proba(input_data)[0][1]  # Probability of fraud
+        feature_names = [f"V{i}" for i in range(1, n_features + 1)]
+        feature_dict = build_feature_dict(
+            scaled_amount, scaled_time, pca_inputs, feature_names
+        )
+        df_input = pd.DataFrame(feature_dict, index=[0])
 
-        if prediction == 1:
-            st.error(f"⚠️ Alert: This transaction is **Fraudulent** (Confidence: {proba:.2f})")
+        pred, prob = predict_transaction(df_input)
+
+        # Display results
+        if pred == 1:
+            st.error(
+                f"⚠️ **Fraudulent** transaction detected "
+                f"(Confidence: {prob * 100:.1f}%)"
+            )
         else:
-            st.success(f"✅ This transaction is **Legitimate** (Confidence: {1 - proba:.2f})")
-
-    except Exception as e:
-        st.error(f"❌ Prediction error: {e}")
+            st.success(
+                f"✅ Transaction is **Legitimate** "
+                f"(Confidence: {(1 - prob) * 100:.1f}%)"
+            )
+    except Exception as exc:
+        st.error(f"❌ Prediction error: {exc}")
+```
