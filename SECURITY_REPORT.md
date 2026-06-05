@@ -1,7 +1,7 @@
 # 🛡️ AppGenius Security Report
 
 **Repository:** `nirzaraghure/credit-card-fraud-detection`
-**Scan Date:** 6/3/2026, 12:43:53 PM
+**Scan Date:** 6/5/2026, 1:48:24 PM
 **Files Scanned:** 1
 **Issues Found:** 6
 
@@ -9,123 +9,123 @@
 
 | Severity | Count |
 |----------|-------|
-| 🔴 Critical | 1 |
-| 🟠 High | 3 |
-| 🟡 Medium | 1 |
+| 🔴 Critical | 0 |
+| 🟠 High | 2 |
+| 🟡 Medium | 3 |
 | 🔵 Low | 1 |
 
 ## 🔍 Detailed Findings
 
-### 🔴 1. SQL injection vulnerability due to user input
-
-**File:** `app.py`
-**Type:** SQL Injection
-**Severity:** CRITICAL
-
-**Description:**
-User input is directly used to create a DataFrame, which could lead to SQL injection attacks.
-
-**Suggested Fix:**
-Use parameterized queries or sanitize user input
-
-**Code Example:**
-```
-data = {...}; return pd.DataFrame(data, index=[0])
-```
-
----
-
-### 🟠 2. Lack of input validation and sanitization
+### 🟠 1. Unvalidated user input
 
 **File:** `app.py`
 **Type:** Input Validation
 **Severity:** HIGH
 
 **Description:**
-User input is not validated or sanitized, which could lead to data corruption or code injection attacks.
+The user input is not validated, which can lead to potential attacks such as SQL injection or cross-site scripting (XSS).
 
 **Suggested Fix:**
-Use type checking and validate user input using regular expressions
+Use Streamlit's built-in input validation or sanitization functions to ensure the input data is safe.
 
 **Code Example:**
 ```
-scaled_amount = st.number_input("...", value=0.0, format="%.4f")
+scaled_amount = st.number_input("💰 Scaled Transaction Amount", value=0.0, format="%.4f")
 ```
 
 ---
 
-### 🟠 3. Sensitive data exposure
+### 🟠 2. Sensitive model data exposed
 
 **File:** `app.py`
 **Type:** Data Exposure
 **Severity:** HIGH
 
 **Description:**
-Model predictions contain sensitive information about transaction legitimacy.
+The model file 'rf_fraud_model.pkl' is loaded in the same directory as the script, which exposes sensitive model data to unauthorized access.
 
 **Suggested Fix:**
-Use secure communication protocols to protect sensitive data
+Store the model file in a secure location, such as a separate directory or a secure storage service.
 
 **Code Example:**
 ```
-st.error(f"... (Confidence: {proba:.2f})")
+model = joblib.load('rf_fraud_model.pkl')
 ```
 
 ---
 
-### 🟡 4. Error handling is too broad
+### 🟡 3. Lack of input data sanitization
+
+**File:** `app.py`
+**Type:** Data Sanitization
+**Severity:** MEDIUM
+
+**Description:**
+The input data is not sanitized, which can lead to potential attacks such as SQL injection or cross-site scripting (XSS).
+
+**Suggested Fix:**
+Use pandas' built-in data cleaning and sanitization functions to ensure the input data is safe.
+
+**Code Example:**
+```
+input_data = pd.DataFrame(data, index=[0])
+```
+
+---
+
+### 🟡 4. Insecure exception handling
 
 **File:** `app.py`
 **Type:** Error Handling
 **Severity:** MEDIUM
 
 **Description:**
-The catch-all exception handler could mask underlying issues.
+The exception handling mechanism catches all exceptions and displays the error message, which can lead to sensitive information disclosure.
 
 **Suggested Fix:**
-Catch specific exceptions and log error messages
+Implement a more secure exception handling mechanism, such as logging the exception and displaying a generic error message.
 
 **Code Example:**
 ```
-except Exception as e: st.error(f"... {e}")
+except Exception as e: st.error(f"❌ Prediction error: {e}")
 ```
 
 ---
 
-### 🔵 5. Code organization is poor
+### 🟡 5. Lack of input validation for button click
 
 **File:** `app.py`
-**Type:** Code Organization
+**Type:** Input Validation
+**Severity:** MEDIUM
+
+**Description:**
+The button click event is not validated, which can lead to potential attacks such as clickjacking.
+
+**Suggested Fix:**
+Use Streamlit's built-in button click validation functions to ensure the button click is safe.
+
+**Code Example:**
+```
+if st.button("🔍 Predict"): 
+```
+
+---
+
+### 🔵 6. Potential information disclosure
+
+**File:** `app.py`
+**Type:** Information Disclosure
 **Severity:** LOW
 
 **Description:**
-Functions are not separated logically.
+The confidence level of the prediction is displayed, which can potentially disclose sensitive information.
 
 **Suggested Fix:**
-Use clear and descriptive function names and organize code into modules
+Remove the confidence level display or implement a more secure way to display sensitive information.
 
 **Code Example:**
 ```
-if st.button("..."):...
-```
-
----
-
-### 🟠 6. Potential DDoS attack due to repeated predictions
-
-**File:** `app.py`
-**Type:** DOS Attack
-**Severity:** HIGH
-
-**Description:**
-Repeated predictions could lead to a denial-of-service (DoS) attack.
-
-**Suggested Fix:**
-Implement rate limiting and caching for repeated predictions
-
-**Code Example:**
-```
-st.button("..."):...
+st.success(f"✅ This transaction is **Legitimate** (Confidence: {1 - proba:.2f})")
 ```
 
 ---
