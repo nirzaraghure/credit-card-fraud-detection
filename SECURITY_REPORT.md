@@ -1,51 +1,53 @@
 # 🛡️ AppGenius Security Report
 
 **Repository:** `nirzaraghure/credit-card-fraud-detection`
-**Scan Date:** 6/5/2026, 1:48:24 PM
+**Scan Date:** 6/9/2026, 11:29:54 AM
 **Files Scanned:** 1
-**Issues Found:** 6
+**Issues Found:** 5
 
 ## 📊 Summary
 
 | Severity | Count |
 |----------|-------|
-| 🔴 Critical | 0 |
-| 🟠 High | 2 |
-| 🟡 Medium | 3 |
-| 🔵 Low | 1 |
+| 🔴 Critical | 1 |
+| 🟠 High | 3 |
+| 🟡 Medium | 1 |
+| 🔵 Low | 0 |
 
 ## 🔍 Detailed Findings
 
-### 🟠 1. Unvalidated user input
+### 🟠 1. Input validation not performed for user input
 
 **File:** `app.py`
-**Type:** Input Validation
+**Type:** Code quality issue
 **Severity:** HIGH
 
 **Description:**
-The user input is not validated, which can lead to potential attacks such as SQL injection or cross-site scripting (XSS).
+User input is not validated, which can lead to unexpected behavior or security vulnerabilities.
 
 **Suggested Fix:**
-Use Streamlit's built-in input validation or sanitization functions to ensure the input data is safe.
+Implement input validation using libraries like `voluptuous` or `pydantic`.
 
 **Code Example:**
 ```
-scaled_amount = st.number_input("💰 Scaled Transaction Amount", value=0.0, format="%.4f")
+def user_input():
+    # Input fields
+    # ...rest of the code...
 ```
 
 ---
 
-### 🟠 2. Sensitive model data exposed
+### 🔴 2. Sensitive model file stored in plain text
 
 **File:** `app.py`
-**Type:** Data Exposure
-**Severity:** HIGH
+**Type:** Security vulnerability
+**Severity:** CRITICAL
 
 **Description:**
-The model file 'rf_fraud_model.pkl' is loaded in the same directory as the script, which exposes sensitive model data to unauthorized access.
+The trained model file `rf_fraud_model.pkl` is stored in plain text, which can lead to model theft or manipulation.
 
 **Suggested Fix:**
-Store the model file in a secure location, such as a separate directory or a secure storage service.
+Store the model file securely using a secrets manager or encrypt it using a library like `cryptography`.
 
 **Code Example:**
 ```
@@ -54,78 +56,61 @@ model = joblib.load('rf_fraud_model.pkl')
 
 ---
 
-### 🟡 3. Lack of input data sanitization
+### 🟠 3. Insecure use of `st.button` for prediction
 
 **File:** `app.py`
-**Type:** Data Sanitization
-**Severity:** MEDIUM
+**Type:** Security vulnerability
+**Severity:** HIGH
 
 **Description:**
-The input data is not sanitized, which can lead to potential attacks such as SQL injection or cross-site scripting (XSS).
+The `st.button` widget is used to trigger the prediction, but it does not provide any protection against CSRF attacks.
 
 **Suggested Fix:**
-Use pandas' built-in data cleaning and sanitization functions to ensure the input data is safe.
+Use a more secure widget like `st.form` or implement CSRF protection using a library like `Flask-WTF`.
 
 **Code Example:**
 ```
-input_data = pd.DataFrame(data, index=[0])
+if st.button("🔍 Predict"):
+    # ...rest of the code...
 ```
 
 ---
 
-### 🟡 4. Insecure exception handling
+### 🟡 4. Insufficient error handling
 
 **File:** `app.py`
-**Type:** Error Handling
+**Type:** Code quality issue
 **Severity:** MEDIUM
 
 **Description:**
-The exception handling mechanism catches all exceptions and displays the error message, which can lead to sensitive information disclosure.
+The `except` block catches all exceptions and displays a generic error message, which can make it difficult to diagnose issues.
 
 **Suggested Fix:**
-Implement a more secure exception handling mechanism, such as logging the exception and displaying a generic error message.
+Implement more specific error handling using `try-except` blocks and log errors using a library like `logging`.
 
 **Code Example:**
 ```
-except Exception as e: st.error(f"❌ Prediction error: {e}")
+except Exception as e:
+    st.error(f"❌ Prediction error: {e}")
 ```
 
 ---
 
-### 🟡 5. Lack of input validation for button click
+### 🟠 5. Insecure use of `st.number_input` for sensitive data
 
 **File:** `app.py`
-**Type:** Input Validation
-**Severity:** MEDIUM
+**Type:** Security vulnerability
+**Severity:** HIGH
 
 **Description:**
-The button click event is not validated, which can lead to potential attacks such as clickjacking.
+The `st.number_input` widget is used to input sensitive data like transaction amounts, which can be intercepted or manipulated.
 
 **Suggested Fix:**
-Use Streamlit's built-in button click validation functions to ensure the button click is safe.
+Use a more secure widget like `st.text_input` or implement encryption using a library like `cryptography`.
 
 **Code Example:**
 ```
-if st.button("🔍 Predict"): 
-```
-
----
-
-### 🔵 6. Potential information disclosure
-
-**File:** `app.py`
-**Type:** Information Disclosure
-**Severity:** LOW
-
-**Description:**
-The confidence level of the prediction is displayed, which can potentially disclose sensitive information.
-
-**Suggested Fix:**
-Remove the confidence level display or implement a more secure way to display sensitive information.
-
-**Code Example:**
-```
-st.success(f"✅ This transaction is **Legitimate** (Confidence: {1 - proba:.2f})")
+scaled_amount = st.number_input("💰 Scaled Transaction Amount", value=0.0, format="%.4f")
 ```
 
 ---
